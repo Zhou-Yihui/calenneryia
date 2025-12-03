@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>明华历 - 大凉国 PWA 日历</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body{margin:0;font-family:system-ui;background:#1a1a1a;color:#d4f1d4;}
+    header{background:#d4f1d4;color:#1a1a1a;padding:1rem;text-align:center;}
+    .today-bar{background:#222;padding:0.5rem 1rem;text-align:center;font-size:1.2rem;}
+    .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:4px;}
+    .day{padding:0.5rem;text-align:center;border-radius:4px;background:#222;cursor:pointer;}
+    .day.today{background:#d4f1d4;color:#1a1a1a;font-weight:bold;}
+    .weekday{font-size:0.75rem;opacity:0.7;}
+    .month-head{background:#333;padding:0.5rem;text-align:center;font-weight:bold;margin-top:1rem;}
+    .year-head{background:#444;padding:0.75rem;text-align:center;font-size:1.4rem;margin-top:1.5rem;}
+    .footer{padding:1rem;text-align:center;font-size:0.8rem;opacity:0.6;}
+    .event-popup{position:fixed;top:20%;left:50%;transform:translateX(-50%);background:#333;padding:1rem;border-radius:8px;display:none;z-index:999;}
+    .event-popup input, .event-popup textarea{width:100%;margin:0.5rem 0;padding:0.3rem;border-radius:4px;border:none;}
+    .event-popup button{margin-top:0.5rem;padding:0.5rem;border:none;border-radius:4px;background:#d4f1d4;color:#1a1a1a;font-weight:bold;cursor:pointer;}
+    .event-list{margin-top:0.5rem;font-size:0.8rem;}
+  </style>
+</head>
+<body>
+  <header>明华历 - 大凉国 PWA 日历</header>
+  <div class="today-bar" id="todayBar">加载中...</div>
+  <div id="calendar"></div>
+  <div class="footer">前端 PWA · 本地存储事件 · 双击刷新</div>
+
+  <div class="event-popup" id="eventPopup">
+    <h3>添加/编辑事件</h3>
+    <input type="text" id="eventTitle" placeholder="事件标题">
+    <textarea id="eventDesc" placeholder="事件描述"></textarea>
+    <button id="saveEventBtn">保存</button>
+    <button id="closeEventBtn">关闭</button>
+  </div>
+
+  <script>
+    // ====== 基础国历设定 ======
+    const START_YEAR = 1; // 元年
+    const TODAY = new Date();
+    const MS_PER_DAY = 86400*1000;
+
+    // 星象和方位（随意玄幻取名）
+    const STARS = ["苍龙","玄凤","朱雀","白虎","黑龟","赤麟","青麟","紫微","太极","流光","星河","幽影"];
+    const DIRECTIONS = ["东","南","西","北","中","上","下","东南","东北","西南","西北","上北","上南","上东","上西","下北","下南","下东","下西"];
+
+    // 日历算法
+    function getMHDate(now){
+      // 元年对应公元前三万年
+      const baseJD = -30000*365.25;
+      const diffDays = Math.floor((now - new Date(0))/MS_PER_DAY + baseJD);
+      const totalDays = diffDays >=0 ? diffDays : 0;
+      const y = Math.floor(totalDays / (28*39)) + 1;
+      const dayOfYear = totalDays % (28*39);
+      const m = Math.floor(dayOfYear/39)+1;
+      const d = (dayOfYear%39)+1;
+      const hou = Math.floor((d-1)/10)+1;
+      const xun = Math.floor((d-1)/39)+1;
+      return {y,m,d,hou,xun};
+    }
+
+    function getStarAndDirection(d){
+      const star = STARS[d%STARS.length];
+      const dir = DIRECTIONS[d%DIRECTIONS.length];
+      return {star,dir};
+    }
+
+    // ====== 事件管理 ======
+    let selectedDate = null;
+    function loadEvents(){
+      const evs = localStorage.getItem('mhEvents');
+      return evs ? JSON.parse(evs) : {};
+    }
+    function saveEvents(events){
+      localStorage.setItem('mhEvents',JSON.stringify(events));
+    }
+    function getEvents(y,m,d){
+      const all = loadEvents();
+      return all[`${y}-${m}-${d}`] || [];
+    }
+    function addEvent(y,m,d,title,desc){
+      const all = loadEvents();
+      const key = `${y}-${m}-${d}`;
+      if(!all[key]) all[key]=[];
+      all[key].push({title,desc});
+      saveEvents(all);
+    }
+
+    // ====== 渲染 ======
+    function renderCalendar(){
+      const cal = document.getElementById('calendar');
+      cal.innerHTML = '';
+      const mhDate = getMHDate(new Date());
+      const {y} = mhDate;
+      const yearHead = document.createElement('div');
+      yearHead.className='year-head';
+      yearHead.textContent=`国历 ${y} 年`;
+      cal.appendChild(yearHead);
+
+      for(let m=1;m<=28;m++){
+        const monthHead = document.createElement('div');
+        monthHead.className='month-head';
+        monthHead.textContent=`${m} 月`;
+        cal.appendChild(monthHead);
+
+        const grid = document.createElement('div');
+        grid.className='calendar-grid';
+
+        for(let d=1;d<=39;d++){
+          const cell = document.createElement('div');
+          cell.className='day';
+          if(mhDate.m===m && mhDate.d===d) cell.classList.add('today');
+          const {star,dir}=getStarAndDirection(d);
+          const evs=getEvents(y,m,d);
+          let evHTML='';
+          if(evs.length){
+            evHTML='<div class="event-list">'+evs.map(e=>e.title).join('<br>')+'</div>';
+          }
+          cell.innerHTML=`<div>${d} 日（第${Math.floor((d-1)/10)+1}侯）</div><div>${star} / ${dir}</div>${evHTML}`;
+          cell.addEventListener('click',()=>openEventPopup(y,m,d));
+          grid.appendChild(cell);
+        }
+        cal.appendChild(grid);
+      }
+    }
+
+    // ====== 动态显示今日 ======
+    function updateTodayBar(){
+      const mhDate=getMHDate(new Date());
+      const {star,dir}=getStarAndDirection(mhDate.d);
+      document.getElementById('todayBar').textContent=
+        `今天：国历 ${mhDate.y} 年 ${mhDate.m} 月 ${mhDate.d} 日 第${mhDate.hou}侯 / 第${mhDate.xun}旬 星象：${star} 方位：${dir} 公历约：${new Date().toISOString().slice(0,10)} `+
+        new Date().toLocaleTimeString();
+    }
+
+    setInterval(()=>{
+      updateTodayBar();
+      renderCalendar();
+    },1000);
+
+    // ====== 事件弹窗 ======
+    const popup=document.getElementById('eventPopup');
+    document.getElementById('saveEventBtn').addEventListener('click',()=>{
+      const title=document.getElementById('eventTitle').value;
+      const desc=document.getElementById('eventDesc').value;
+      if(title && selectedDate){
+        addEvent(selectedDate.y,selectedDate.m,selectedDate.d,title,desc);
+        popup.style.display='none';
+        renderCalendar();
+      }
+    });
+    document.getElementById('closeEventBtn').addEventListener('click',()=>{popup.style.display='none';});
+    function openEventPopup(y,m,d){
+      selectedDate={y,m,d};
+      document.getElementById('eventTitle').value='';
+      document.getElementById('eventDesc').value='';
+      popup.style.display='block';
+    }
+
+    // ====== 初始化 ======
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('sw.js');
+    }
+    renderCalendar();
+    updateTodayBar();
+  </script>
+</body>
+</html>
