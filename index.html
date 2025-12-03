@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>明华历 - 大凉国</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="manifest" href="manifest.json">
+<style>
+  body {margin:0;font-family:system-ui;background:#1a1a1a;color:#d4f1d4;}
+  header {background:#d4f1d4;color:#1a1a1a;padding:1rem;text-align:center;font-size:1.2rem;}
+  .today-bar {background:#222;padding:0.5rem 1rem;text-align:center;font-size:1rem;}
+  .calendar {display:flex;overflow-x:auto;scroll-behavior:smooth;padding:10px;}
+  .year-col {min-width:300px;margin-right:20px;}
+  .month-head {background:#333;padding:0.5rem;text-align:center;font-weight:bold;margin-top:1rem;}
+  .calendar-grid {display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:4px;}
+  .day {padding:0.5rem;text-align:center;border-radius:4px;background:#222;}
+  .day.today {background:#d4f1d4;color:#1a1a1a;font-weight:bold;}
+  .weekday {font-size:0.75rem;opacity:0.7;}
+  .footer {padding:1rem;text-align:center;font-size:0.8rem;opacity:0.6;}
+  button#a2hs-btn {position:fixed;bottom:20px;left:20px;padding:10px;z-index:1000;background:#d4f1d4;color:#1a1a1a;border:none;border-radius:5px;cursor:pointer;}
+</style>
+</head>
+<body>
+<header>明华历 - 大凉国</header>
+<div class="today-bar" id="todayBar">加载中...</div>
+<div class="calendar" id="calendar"></div>
+<div class="footer">核心算法内置 · 无模块 · PWA 前端版</div>
+<button id="a2hs-btn" style="display:none;">添加到桌面</button>
+<script>
+// ==== 国历核心设定 ====
+const YEAR_DAYS = 28*116; // 每年约28个月，每月116天
+const DAY_HOURS = 58;
+const HOU_DAYS = 10;
+const XUN_DAYS = 39;
+
+const STAR_NAMES = ["苍玄","曜影","炽焱","璇光","曜晶","玄曜","明澜","曜辉"];
+const DIRECTIONS = ["东","南","西","北","中","上","下","东南","东北","西南","西北","上北","上南","上东","上西","下北","下南","下东","下西"];
+
+function getMhDate(now=new Date()) {
+  const msPerDay = 24*60*60*1000;
+  const start = new Date(-30000,0,1); // 元年对应公元前三万年
+  const diffDays = (now-start)/msPerDay;
+  const mhYear = Math.floor(diffDays / YEAR_DAYS) +1;
+  const dayOfYear = Math.floor(diffDays % YEAR_DAYS);
+  const mhMonth = Math.floor(dayOfYear / 116) +1;
+  const mhDay = (dayOfYear % 116)+1;
+  return {y:mhYear,m:mhMonth,d:mhDay};
+}
+
+function getHouXun(day){
+  const hou = Math.floor((day-1)/HOU_DAYS)+1;
+  const xun = Math.floor((day-1)/XUN_DAYS)+1;
+  const lastHou = ((day-1)%HOU_DAYS)+1;
+  return {hou,xun,lastHou};
+}
+
+function getStarDirection(day){
+  const star = STAR_NAMES[day % STAR_NAMES.length];
+  const dir = DIRECTIONS[day % DIRECTIONS.length];
+  return {star,dir};
+}
+
+// ==== 渲染 ====
+function renderCalendar() {
+  const cal = document.getElementById('calendar');
+  cal.innerHTML='';
+  const mh = getMhDate();
+  for(let y=mh.y-1;y<=mh.y+1;y++){
+    const col = document.createElement('div');
+    col.className='year-col';
+    const yearHead = document.createElement('div');
+    yearHead.className='year-head';
+    yearHead.textContent=`国历 ${y} 年`;
+    col.appendChild(yearHead);
+    for(let m=1;m<=28;m++){
+      const monthHead = document.createElement('div');
+      monthHead.className='month-head';
+      monthHead.textContent=`第 ${m} 月`;
+      col.appendChild(monthHead);
+      const grid = document.createElement('div');
+      grid.className='calendar-grid';
+      for(let d=1;d<=116;d++){
+        const cell = document.createElement('div');
+        cell.className='day';
+        if(y===mh.y && m===mh.m && d===mh.d) cell.classList.add('today');
+        const {hou,xun,lastHou}=getHouXun(d);
+        const {star,dir}=getStarDirection(d);
+        const gDate = new Date();
+        cell.innerHTML=`<div>${d}</div>
+          <div class="weekday">侯:${hou} 旬:${xun} 末侯:${lastHou}</div>
+          <div class="weekday">星:${star} 方:${dir}</div>
+          <div class="weekday">公历:${gDate.toISOString().slice(0,10)}</div>`;
+        grid.appendChild(cell);
+      }
+      col.appendChild(grid);
+    }
+    cal.appendChild(col);
+  }
+}
+
+// ==== 动态显示时间 ====
+function updateTodayBar(){
+  const now=new Date();
+  const mh=getMhDate(now);
+  const {hou,xun,lastHou}=getHouXun(mh.d);
+  const {star,dir}=getStarDirection(mh.d);
+  document.getElementById('todayBar').textContent=
+    `今天：国历 ${mh.y} 年 ${mh.m} 月 ${mh.d} 日　侯:${hou} 旬:${xun} 末侯:${lastHou}　星:${star} 方:${dir}　公历:${now.toISOString().slice(0,10)} ${now.toTimeString().slice(0,8)}`;
+}
+setInterval(updateTodayBar,1000);
+renderCalendar();
+
+// ==== PWA 添加到桌面弹窗 ====
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredPrompt=e;
+  const btn=document.getElementById('a2hs-btn');
+  btn.style.display='block';
+  btn.addEventListener('click',async ()=>{
+    btn.style.display='none';
+    deferredPrompt.prompt();
+    const choice=await deferredPrompt.userChoice;
+    console.log(choice.outcome);
+    deferredPrompt=null;
+  });
+});
+</script>
+</body>
+</html>
