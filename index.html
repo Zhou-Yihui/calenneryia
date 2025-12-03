@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>明华历 - 大凉国 PWA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="1764750842575.png">
+  <style>
+    body{margin:0;font-family:system-ui;background:#1a1a1a;color:#d4f1d4;}
+    header{background:#d4f1d4;color:#1a1a1a;padding:1rem;text-align:center;font-weight:bold;}
+    .today-bar{background:#222;padding:0.5rem 1rem;text-align:center;font-size:1.2rem;}
+    .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:4px;}
+    .day{padding:0.5rem;text-align:center;border-radius:4px;background:#222;}
+    .day.today{background:#d4f1d4;color:#1a1a1a;font-weight:bold;}
+    .weekday{font-size:0.75rem;opacity:0.7;}
+    .month-head{background:#333;padding:0.5rem;text-align:center;font-weight:bold;margin-top:1rem;}
+    .year-head{background:#444;padding:0.75rem;text-align:center;font-size:1.4rem;margin-top:1.5rem;}
+    .footer{padding:1rem;text-align:center;font-size:0.8rem;opacity:0.6;}
+  </style>
+</head>
+<body>
+  <header>明华历 - 大凉国 PWA</header>
+  <div class="today-bar" id="todayBar">加载中...</div>
+  <div id="calendar"></div>
+  <div class="footer">核心算法内置 · 无模块 · 前端 PWA</div>
+
+<script>
+/* ========== 核心参数 ========== */
+const HOURS_PER_DAY = 58;
+const DAYS_PER_MONTH = 116;
+const MONTHS_PER_YEAR = 28;
+const DAYS_PER_HOU = 10;
+const DAYS_PER_XUN = 39;
+const YEAR_TO_RECUR = 17; // 1国历年 ≈ 17回归年
+
+const STAR_NAMES = ["玄火星","苍穹星","幽冥星","琉璃星","灵霄星","曜影星","赤焰星","青冥星","紫曜星","苍曜星"];
+const DIRECTIONS = ["东","南","西","北","中","上","下","东南","东北","西南","西北","上北","上南","上东","上西","下北","下南","下东","下西"];
+
+/* ======= 今天的国历基准 ======= */
+const TODAY = new Date(); // 浏览器本地时间
+let todaySeconds = TODAY.getTime()/1000;
+
+/* ======= 元年起点对应公历 (约公元前30000年) ======= */
+const START_GREG = new Date(-30000,0,1,0,0,0); // JS日期可负表示公元前
+
+/* ======= 核心转换函数 ======= */
+function secondsSinceStart(){
+  return (todaySeconds - START_GREG.getTime()/1000);
+}
+
+function gregToMh(){
+  let totalHours = secondsSinceStart() / 3600 * (24/HOURS_PER_DAY); // 调整日长
+  let totalDays = Math.floor(totalHours / HOURS_PER_DAY);
+  let dayHour = totalHours % HOURS_PER_DAY;
+  
+  let year = Math.floor(totalDays / (DAYS_PER_MONTH*MONTHS_PER_YEAR)) + 1;
+  let dayOfYear = totalDays % (DAYS_PER_MONTH*MONTHS_PER_YEAR);
+  let month = Math.floor(dayOfYear / DAYS_PER_MONTH) + 1;
+  let day = (dayOfYear % DAYS_PER_MONTH) + 1;
+  
+  let hou = Math.floor((day-1)/DAYS_PER_HOU)+1;
+  let xun = Math.floor((day-1)/DAYS_PER_XUN)+1;
+  
+  let star = STAR_NAMES[(totalDays)%STAR_NAMES.length];
+  let dir = DIRECTIONS[(totalDays)%DIRECTIONS.length];
+
+  let hour = Math.floor(dayHour);
+  let min = Math.floor((dayHour-hour)*60);
+  let sec = Math.floor((((dayHour-hour)*60)-min)*60);
+
+  return {year,month,day,hou,xun,star,dir,hour,min,sec};
+}
+
+/* ======= 渲染日历 ======= */
+function renderToday(){
+  let mh = gregToMh();
+  let todayBar = document.getElementById('todayBar');
+  todayBar.textContent = 
+    `今天：国历 ${mh.year} 年 ${mh.month} 月 ${mh.day} 日　` +
+    `侯: ${mh.hou} 旬: ${mh.xun} 星象: ${mh.star} 方位: ${mh.dir} ` +
+    `时间：${String(mh.hour).padStart(2,'0')}:${String(mh.min).padStart(2,'0')}:${String(mh.sec).padStart(2,'0')} ` +
+    `公历参考：${TODAY.toISOString().slice(0,10)}`;
+}
+
+/* ======= 循环更新时间 ======= */
+setInterval(()=>{
+  TODAY.setSeconds(TODAY.getSeconds()+1);
+  renderToday();
+},1000);
+
+renderToday();
+</script>
+</body>
+</html>
