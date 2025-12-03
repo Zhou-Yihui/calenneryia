@@ -1,0 +1,12 @@
+{
+  "name": "明华历 - 大凉国",
+  "short_name": "明华历",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#d4f1d4",
+  "icons": [
+    { "src": "/1764750842575.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/1764750842575.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
