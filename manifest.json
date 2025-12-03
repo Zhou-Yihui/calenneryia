@@ -1,0 +1,22 @@
+{
+  "name": "明华历 - 大凉国日历",
+  "short_name": "明华历",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#d4f1d4",
+  "orientation": "portrait",
+  "description": "国历为主体的 PWA 日历，显示星象、方位和动态时间。",
+  "icons": [
+    {
+      "src": "1764750842575.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "1764750842575.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
