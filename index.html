@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>大凉国明华国历</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoi5piO5pif5LiyIC0g5pKS5piv5LqU5LqYIiwic2hvcnRfbmFtZSI6IuaYjuaXn+S4siIsInN0YXJ0X3VybCI6Ii8iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMWExYTFhIiwidGhlbWVfY29sb3IiOiIjZDRmMWQ0IiwiaWNvbnMiOlt7InNyYyI6Ii8xNzY0NzUwODQyNTc1LnBuZyIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9wbmcifSx7InNyYyI6Ii8xNzY0NzUwODQyNTc1LnBuZyIsInNpemVzIjoiNTEyeDUxMiIsInR5cGUiOiJpbWFnZS9wbmcifV19">
+  <style>
+    body{margin:0;font-family:system-ui;background:#1a1a1a;color:#d4f1d4;}
+    header{background:#d4f1d4;color:#1a1a1a;padding:1rem;text-align:center;}
+    .today-bar{background:#222;padding:0.5rem 1rem;text-align:center;font-size:1.2rem;}
+    .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:4px;}
+    .day{padding:0.5rem;text-align:center;border-radius:4px;background:#222;}
+    .day.today{background:#d4f1d4;color:#1a1a1a;font-weight:bold;}
+    .weekday{font-size:0.75rem;opacity:0.7;}
+    .month-head{background:#333;padding:0.5rem;text-align:center;font-weight:bold;margin-top:1rem;}
+    .year-head{background:#444;padding:0.75rem;text-align:center;font-size:1.4rem;margin-top:1.5rem;}
+    .footer{padding:1rem;text-align:center;font-size:0.8rem;opacity:0.6;}
+  </style>
+</head>
+<body>
+  <header>明华历 - 大凉国（单文件完整版）</header>
+  <div class="today-bar" id="todayBar">加载中...</div>
+  <div id="calendar"></div>
+  <div class="footer">核心算法内置 · 无模块 · 双击即运行</div>
+
+  <script>
+    // ===== 内置核心（永不动） =====
+    const k = 0.8266, LTk = 172600, LY = 3248, LM = 116, JD0 = 2092857.333, SEC_d = 86400;
+    const TODAY_MH = { y: 1884, m: 3, d: 76 };   // 今天固定
+    const START_YEAR = 1880;
+    const END_YEAR = 1890;
+
+    function mhToGreg(y, m, d) {
+      const entry = slas1884[m - 1];
+      const Dt = (y - 1) * LY + (m - 1) * LM + (d - 1) - (entry ? entry.delta : 0);
+      return new Date((JD0 + Dt * LTk / SEC_d) * 86400 * 1000);
+    }
+
+    // ===== 内置皮肤（无 fetch） =====
+    const slas1884 = [
+      { m: 1, real: 119, delta: 3, name: "启辰节" },
+      { m: 2, real: 114, delta: -2, name: "初曜节" },
+      { m: 3, real: 116, delta: 0, name: "望舒节" },
+      { m: 4, real: 120, delta: 4, name: "繁露节" },
+      { m: 5, real: 112, delta: -4, name: "芳华节" },
+      { m: 6, real: 117, delta: 1, name: "景明节" },
+      { m: 7, real: 115, delta: -1, name: "清辉节" },
+      { m: 8, real: 118, delta: 2, name: "昭光节" },
+      { m: 9, real: 116, delta: 0, name: "盛景节" },
+      { m: 10, real: 121, delta: 5, name: "宸极节" },
+      { m: 11, real: 111, delta: -5, name: "曦和节" },
+      { m: 12, real: 116, delta: 0, name: "嘉瑞节" },
+      { m: 13, real: 119, delta: 3, name: "澄明节" },
+      { m: 14, real: 113, delta: -3, name: "雅韵节" },
+      { m: 15, real: 117, delta: 1, name: "曜灵节" },
+      { m: 16, real: 116, delta: 0, name: "熙和节" },
+      { m: 17, real: 118, delta: 2, name: "炽烈节" },
+      { m: 18, real: 115, delta: -1, name: "静宁节" },
+      { m: 19, real: 116, delta: 0, name: "淳厚节" },
+      { m: 20, real: 120, delta: 4, name: "朗清节" },
+      { m: 21, real: 112, delta: -4, name: "寒素节" },
+      { m: 22, real: 116, delta: 0, name: "玄幽节" },
+      { m: 23, real: 119, delta: 3, name: "素洁节" },
+      { m: 24, real: 114, delta: -2, name: "皓洁节" },
+      { m: 25, real: 116, delta: 0, name: "靖安节" },
+      { m: 26, real: 117, delta: 1, name: "安泰节" },
+      { m: 27, real: 115, delta: -1, name: "宁和节" },
+      { m: 28, real: 116, delta: 0, name: "岁华节" }
+];
+
+// === 渲染多年份全月全日历 ===
+function renderCalendar() {
+  const cal = document.getElementById('calendar');
+  cal.innerHTML = '';
+  for (let y = START_YEAR; y <= END_YEAR; y++) {
+    const yearHead = document.createElement('div');
+    yearHead.className = 'year-head';
+    yearHead.textContent = `国历 ${y} 年`;
+    cal.appendChild(yearHead);
+    for (let m = 1; m <= 28; m++) {
+      const monthHead = document.createElement('div');
+      monthHead.className = 'month-head';
+      monthHead.textContent = `${m} 月`;
+      cal.appendChild(monthHead);
+      const grid = document.createElement('div');
+      grid.className = 'calendar-grid';
+      const days = slas1884[m - 1].real;
+      for (let d = 1; d <= days; d++) {
+        const cell = document.createElement('div');
+        cell.className = 'day';
+        if (y === TODAY_MH.y && m === TODAY_MH.m && d === TODAY_MH.d) cell.classList.add('today');
+        const gDate = mhToGreg(y, m, d);
+        cell.innerHTML = `
+          <div>${d}</div>
+          <div class="weekday">${gDate.toISOString().slice(5, 10)}</div>
+        `;
+        grid.appendChild(cell);
+      }
+      cal.appendChild(grid);
+    }
+  }
+}
+
+// === 初始化（无异步） ===
+function init() {
+  renderCalendar();
+  document.getElementById('todayBar').textContent =
+    `今天：国历 1884 年 3 月 76 日　望舒节　公历：${mhToGreg(1884, 3, 76).toISOString().slice(0, 10)}`;
+}
+init();
+  </script>
+</body>
+</html>
